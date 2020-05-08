@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.mail import send_mail
@@ -27,7 +28,7 @@ path_detalhe = 'blog/post/detail.html'
 
 
 def post_list(request, tag_slug=None):
-    """Faz a paginaçã"""
+    """Faz a paginação"""
     object_list = Post.published.all() # queryset
     tag = None
 
@@ -76,10 +77,21 @@ def post_detail(request, year, month, day, post):
 
     else:
         comment_form = CommentForm()
+
+    #lista de posts similares
+    post_tags_id = post.tags.values_list('id', flat=True)
+
+    similar_posts = Post.published.filter(tags__in=post_tags_id)\
+                                  .exclude(id=post.id)
+    similar_posts = similar_posts.annotate(same_tags=Count('tags'))\
+                                .order_by('-same_tags','-publish')[:4]
+
+
     return render(request, path_detalhe, {'post':post,
                                           'comments':comments,
                                           'new_comment':new_comment,
-                                          'comment_form':comment_form})
+                                          'comment_form':comment_form,
+                                          'similar_posts':similar_posts})
 
 
 
